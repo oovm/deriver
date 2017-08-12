@@ -5,10 +5,11 @@ fn ready() {
     println!("it works!")
 }
 
-
 #[derive(From)]
 enum Test {
-    A(String),
-    B(Option<String>),
-    C(Box<String>),
+    A1(u8),
+    // #[from(ignore)]
+    // A2(u8),
+    B(Option<u16>),
+    C(Box<u32>),
 }

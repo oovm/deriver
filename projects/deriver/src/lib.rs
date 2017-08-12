@@ -20,11 +20,13 @@ use syn::parse_macro_input;
 /// Derived from:
 ///
 /// ```
+/// # use deriver::From;
+///
 /// #[derive(From)]
 /// enum Test {
-///     A(String),
-///     B(Option<String>),
-///     C(Box<String>),
+///     A(u8),
+///     B(Option<u16>),
+///     C(Box<u32>),
 /// }
 /// ```
 ///
@@ -32,23 +34,23 @@ use syn::parse_macro_input;
 ///
 /// ```
 /// # enum Test {
-/// #    A(String),
-/// #    B(Option<String>),
-/// #    C(Box<String>),
+/// #    A(u8),
+/// #    B(Option<u16>),
+/// #    C(Box<u32>),
 /// # }
 ///
-/// impl From<String> for Test {
-///     fn from(o: String) -> Self {
+/// impl From<u8> for Test {
+///     fn from(o: u8) -> Self {
 ///         Self::A(o)
 ///     }
 /// }
-/// impl From<String> for Test {
-///     fn from(o: String) -> Self {
+/// impl From<u16> for Test {
+///     fn from(o: u16) -> Self {
 ///         Self::B(Some(o))
 ///     }
 /// }
-/// impl From<String> for Test {
-///     fn from(o: String) -> Self {
+/// impl From<u32> for Test {
+///     fn from(o: u32) -> Self {
 ///         Self::C(Box::new(o))
 ///     }
 /// }
