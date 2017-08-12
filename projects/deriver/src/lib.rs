@@ -5,6 +5,7 @@
 #![doc(html_favicon_url = "https://raw.githubusercontent.com/oovm/shape-rs/dev/projects/images/Trapezohedron.svg")]
 
 mod derive_from;
+mod helpers;
 
 use quote::ToTokens;
 use syn::parse_macro_input;

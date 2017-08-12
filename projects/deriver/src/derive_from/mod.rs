@@ -1,9 +1,9 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
-use syn::parse::{Parse, Parser, ParseStream};
-use syn::token::Enum;
-use syn::{Fields, ItemEnum, PathArguments, PathSegment, Type, TypePath};
+use syn::parse::{Parse, ParseStream};
 
+use syn::{Fields, ItemEnum};
+use crate::helpers::{WrapperKind, WrapperType};
 
 pub enum FromBuilder {
     Enum(EnumContext),
@@ -17,14 +17,9 @@ pub struct EnumContext {
 
 pub struct VariantContext {
     name: Ident,
-    kind: VariantKind,
-    typing: Type,
+    typing: WrapperType,
 }
 
-pub enum VariantKind {
-    Normal,
-    Boxed,
-}
 
 impl Parse for FromBuilder {
     fn parse(input: ParseStream) -> syn::Result<Self> {
@@ -51,41 +46,8 @@ impl Parse for FromBuilder {
                                 "Expected single field enum",
                             ));
                         }
-                        let (typing, kind) = match &first.ty {
-                            Type::Path(p) => {
-                                let mut name = vec![];
-                                for segment in p.path.segments.iter() {
-                                    name.push_str(segment.ident.to_string());
-                                }
-                                let name = name.join("::");
-                                let kind = match name.as_str() {
-                                    "Box" => (first.ty.clone(), VariantKind::Normal),
-                                    _ => (first.ty.clone(), VariantKind::Normal),
-                                };
-
-
-                                match p.path.segments.last() {
-                                    None => {
-                                        Err(syn::Error::new(
-                                            input.span(),
-                                            "Expected single field enum",
-                                        ))
-                                    }
-                                    Some(s) => {
-                                        match &s.arguments {
-                                            PathArguments::None => {}
-                                            PathArguments::AngleBracketed(generic) => {
-                                                generic.args
-                                            }
-                                            PathArguments::Parenthesized(_) => {}
-                                        }
-                                    }
-                                }
-                            }
-                            _ => (first.ty.clone(), VariantKind::Normal)
-                        };
-
-                        variants.push(VariantContext { name: term.ident, kind, typing })
+                        let typing = WrapperType::new(&first.ty)?;
+                        variants.push(VariantContext { name: term.ident, typing })
                     }
                     Fields::Unit => {}
                 }
@@ -97,37 +59,44 @@ impl Parse for FromBuilder {
 }
 
 
-fn get_typing(typing: &Type) -> (Type, VariantKind) {
-    match typing {
-        Type::Path(p) => {
-            let mut name = vec![];
-            for segment in p.path.segments.iter() {
-                name.push_str(segment.ident.to_string());
-            }
-            let name = name.join("::");
-            let kind = match name.as_str() {
-                "Box" => (p.path.clone(), VariantKind::Boxed),
-                _ => (p.path.clone(), VariantKind::Normal),
-            };
-            (p.path.clone(), kind)
-        }
-        _ => (typing.clone(), VariantKind::Normal)
-    }
-}
-
-
 impl ToTokens for FromBuilder {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
             FromBuilder::Enum(o) => {
-                let name = &o.name;
-                tokens.extend(quote! {
-                    impl From<#name> for Lisp {
-                        fn from(value: #name) -> Self {
-                            Lisp::Symbol(value.to_string())
+                let type_out = &o.name;
+                for i in &o.variants {
+                    let field = &i.name;
+                    let type_in = &i.typing.typing;
+                    match &i.typing.kind {
+                        WrapperKind::Normal => {
+                            tokens.extend(quote! {
+                                impl From<#type_in> for #type_out {
+                                    fn from(o: #type_in) -> Self {
+                                        Self::#field(o)
+                                    }
+                                }
+                            });
+                        }
+                        WrapperKind::Option => {
+                            tokens.extend(quote! {
+                                impl From<#type_in> for #type_out {
+                                    fn from(o: #type_in) -> Self {
+                                        Self::#field(Some(o))
+                                    }
+                                }
+                            });
+                        }
+                        WrapperKind::Boxed => {
+                            tokens.extend(quote! {
+                                impl From<#type_in> for #type_out {
+                                    fn from(o: #type_in) -> Self {
+                                        Self::#field(Box::new(o))
+                                    }
+                                }
+                            });
                         }
                     }
-                });
+                }
             }
         }
     }

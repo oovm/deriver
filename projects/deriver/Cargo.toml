@@ -2,9 +2,9 @@
 name = "deriver"
 version = "0.0.0"
 authors = ["Aster <192607617@qq.com>"]
-description = "..."
-repository = "https://github.com/oovm/sub_projects"
-documentation = "https://docs.rs/sub_projects"
+description = "Derive more traits for Rust"
+repository = "https://github.com/oovm/deriver"
+documentation = "https://docs.rs/deriver"
 readme = "Readme.md"
 license = "MPL-2.0"
 edition = "2021"
