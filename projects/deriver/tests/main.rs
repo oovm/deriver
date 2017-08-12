@@ -8,7 +8,7 @@ fn ready() {
 
 #[derive(From)]
 enum Test {
-    A(u8),
-    B(Option<u8>),
-    C(Box<u8>),
+    A(String),
+    B(Option<String>),
+    C(Box<String>),
 }

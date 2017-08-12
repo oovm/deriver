@@ -1,5 +1,4 @@
-use syn::{Error, GenericArgument, PathArguments, Type};
-use syn::spanned::Spanned;
+use syn::{spanned::Spanned, Error, GenericArgument, PathArguments, Type};
 
 pub enum WrapperKind {
     Normal,
@@ -29,58 +28,29 @@ impl WrapperType {
                 let name = name.join("::");
                 let kind = match name.as_str() {
                     "Option" => WrapperKind::Option,
-                    "Box" => WrapperKind::Boxed,
+                    "Box" | "alloc::boxed::Box" => WrapperKind::Boxed,
                     _ => return Ok(WrapperType::normal(typing.clone())),
                 };
                 let typing = match p.path.segments.last() {
-                    None => {
-                        Err(syn::Error::new(
-                            typing.span(),
-                            "Expected single field enum",
-                        ))?
-                    }
-                    Some(s) => {
-                        match &s.arguments {
-                            PathArguments::AngleBracketed(generic) => {
-                                let mut types = generic.args.iter();
-                                let first = types.next();
-                                let first = match first {
-                                    Some(s) => {
-                                        match s {
-                                            GenericArgument::Type(t) => {
-                                                t.clone()
-                                            }
-                                            _ => {
-                                                Err(syn::Error::new(
-                                                    typing.span(),
-                                                    "Expected single field enum",
-                                                ))?
-                                            }
-                                        }
-                                    }
-                                    None => {
-                                        Err(syn::Error::new(
-                                            typing.span(),
-                                            "Expected single field enum",
-                                        ))?
-                                    }
-                                };
-                                if let Some(_) = types.next() {
-                                    Err(syn::Error::new(
-                                        typing.span(),
-                                        "Expected single field enum",
-                                    ))?
-                                }
-                                first
+                    None => Err(Error::new(typing.span(), "Expected single field enum"))?,
+                    Some(s) => match &s.arguments {
+                        PathArguments::AngleBracketed(generic) => {
+                            let mut types = generic.args.iter();
+                            let first = types.next();
+                            let first = match first {
+                                Some(s) => match s {
+                                    GenericArgument::Type(t) => t.clone(),
+                                    _ => Err(Error::new(typing.span(), "Expected single field enum"))?,
+                                },
+                                None => Err(Error::new(typing.span(), "Expected single field enum"))?,
+                            };
+                            if let Some(_) = types.next() {
+                                Err(Error::new(typing.span(), "Expected single field enum"))?
                             }
-                            _ => {
-                                Err(syn::Error::new(
-                                    typing.span(),
-                                    "Expected single field enum",
-                                ))?
-                            }
+                            first
                         }
-                    }
+                        _ => Err(Error::new(typing.span(), "Expected single field enum"))?,
+                    },
                 };
                 Ok(Self { kind, typing })
             }

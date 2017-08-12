@@ -2,13 +2,12 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use syn::parse::{Parse, ParseStream};
 
-use syn::{Fields, ItemEnum};
 use crate::helpers::{WrapperKind, WrapperType};
+use syn::{Error, Fields, ItemEnum};
 
 pub enum FromBuilder {
     Enum(EnumContext),
 }
-
 
 pub struct EnumContext {
     name: Ident,
@@ -20,9 +19,8 @@ pub struct VariantContext {
     typing: WrapperType,
 }
 
-
 impl Parse for FromBuilder {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream) -> Result<Self, Error> {
         if let Ok(o) = input.parse::<ItemEnum>() {
             let mut variants = Vec::new();
             for term in o.variants {
@@ -32,19 +30,13 @@ impl Parse for FromBuilder {
                         let mut tuples = tuple.unnamed.iter();
                         let first = tuples.next();
                         let first = match first {
-                            Some(s) => { s }
+                            Some(s) => s,
                             None => {
-                                return Err(syn::Error::new(
-                                    input.span(),
-                                    "Expected single field enum",
-                                ));
+                                return Err(Error::new(input.span(), "Expected single field enum"));
                             }
                         };
                         if let Some(_) = tuples.next() {
-                            return Err(syn::Error::new(
-                                input.span(),
-                                "Expected single field enum",
-                            ));
+                            return Err(Error::new(input.span(), "Expected single field enum"));
                         }
                         let typing = WrapperType::new(&first.ty)?;
                         variants.push(VariantContext { name: term.ident, typing })
@@ -54,10 +46,9 @@ impl Parse for FromBuilder {
             }
             return Ok(FromBuilder::Enum(EnumContext { name: o.ident, variants }));
         }
-        Err(syn::Error::new(input.span(), "Expected enum"))
+        Err(Error::new(input.span(), "Expected enum"))
     }
 }
-
 
 impl ToTokens for FromBuilder {
     fn to_tokens(&self, tokens: &mut TokenStream) {
